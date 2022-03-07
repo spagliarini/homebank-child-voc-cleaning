@@ -5,6 +5,7 @@
 """
 import os
 import sklearn
+import sklearn.metrics as sklm
 import numpy as np
 import xlsxwriter
 import xlrd
@@ -21,12 +22,13 @@ def qualitative_table(args):
     """
 
     # Read judge list
-    judge_list_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_judges_list.csv')
+    #judge_list_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_judges_list.csv')
+    judge_list_table = pd.read_csv(args.data_dir + '/' + 'common_judges_list.csv')
     judges_list_code = judge_list_table["judge_code"]
     judges_list_name = judge_list_table["judge_name"]
 
     # Initialize sheet
-    workbook = xlsxwriter.Workbook(args.data_dir + '/' + args.baby_id + '_Qualitative_table.xlsx')
+    workbook = xlsxwriter.Workbook(args.data_dir + '/' + args.baby_id + '_Qualitative_table_ALL.xlsx')
     worksheet = workbook.add_worksheet()
 
     n_test_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_scrubbed_CHNrelabel_' + judges_list_name[0] + '_1.csv')
@@ -102,7 +104,7 @@ def cohen_kappa(classes, args):
     """
 
     # Read sheet
-    workbook = xlrd.open_workbook(args.data_dir + '/' + args.baby_id + '_Qualitative_table.xlsx')
+    workbook = xlrd.open_workbook(args.data_dir + '/' + args.baby_id + '_Qualitative_table_ALL.xlsx')
     sheet = workbook.sheet_by_index(0)
 
     # Create judge list (column name) and values (judges)
@@ -133,10 +135,10 @@ def cohen_kappa(classes, args):
     for i in range(0,len(judges)):
         print(column_name[i])
         for j in range(0, len(judges)):
-            Cohen_k[i,j] = sklearn.metrics.cohen_kappa_score(judges[i], judges[j])
+            Cohen_k[i,j] = sklm.cohen_kappa_score(judges[i], judges[j])
 
     # Initialize sheet to save Cohen kappa
-    workbook = xlsxwriter.Workbook(args.data_dir + '/' + args.baby_id + '_Cohen_kappa.xlsx')
+    workbook = xlsxwriter.Workbook(args.data_dir + '/' + args.baby_id + '_Cohen_kappa_ALL.xlsx')
     worksheet = workbook.add_worksheet()
 
     # Creating content and common data
@@ -171,13 +173,77 @@ def cohen_kappa(classes, args):
 
     print('Done')
 
+def avg_cohen(args):
+    """
+    Compute the average Cohen coefficients of the judges over different judgements.
+    """
+    # Read judge list
+    #judge_list_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_judges_list.csv')
+    judge_list_table = pd.read_csv(args.data_dir + '/' + 'common_judges_list.csv')
+    judges_list_code = judge_list_table["judge_code"]
+    judges_list_name = judge_list_table["judge_name"]
+
+    # Read baby list
+    babies_table = pd.read_csv(args.data_dir + '/' + 'babies_list.csv')
+    babies = babies_table["name"]
+    age = babies_table["age"]
+
+    # Unify the data
+    all_cohen = []
+    for b in range(0, len(babies)):
+        workbook = xlrd.open_workbook(args.data_dir + '/' + babies[b] + '_Cohen_kappa_ALL.xlsx')
+        sheet = workbook.sheet_by_index(0)
+        aux_cohen = np.zeros((len(judges_list_name), len(judges_list_name)))
+        for i in range(1, len(judges_list_name)+1):
+            for j in range(1, len(judges_list_name)+1):
+                aux_cohen[i-1,j-1] = sheet.cell_value(i,j)
+        all_cohen.append(aux_cohen)
+
+    all_cohen = np.asarray(all_cohen)
+
+    # Compute average Cohen coefficient and save the table
+    avg_cohen = np.mean(all_cohen, axis=0)
+
+    workbook = xlsxwriter.Workbook(args.data_dir + '/' + 'average_Cohen_ALL.xlsx')
+    worksheet = workbook.add_worksheet()
+    # Define judges names on "xy axis"
+    row = 0
+    column = 1
+    # Iterating through content list
+    for item in judges_list_name:
+        # write operation perform
+        worksheet.write(row, column, item)
+
+        # incrementing the value of row by one
+        # with each iterations.
+        column += 1
+
+    row = 1
+    column = 0
+    # Iterating through content list
+    for item in judges_list_name:
+        # write operation perform
+        worksheet.write(row, column, item)
+
+        # incrementing the value of row by one
+        # with each iterations.
+        row += 1
+
+    for row in range(1, len(judges_list_name) + 1):
+        for column in range(1, len(judges_list_name) + 1):
+            worksheet.write(row, column, avg_cohen[row - 1, column - 1])
+
+    workbook.close()
+
+    print('Done')
+
 if __name__ == '__main__':
     import argparse
     import glob2
     import sys
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--option', type=str, choices=['table', 'cohen'])
+    parser.add_argument('--option', type=str, choices=['table', 'cohen', 'avg'])
     parser.add_argument('--data_dir', type=str)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--baby_id', type = str)
@@ -194,5 +260,8 @@ if __name__ == '__main__':
     if args.option == 'cohen':
         classes = ['CHNNSP', 'CHNSP', 'NOF']
         cohen_kappa(classes, args)
+
+    if args.option == 'avg':
+        avg_cohen(args)
 
     ### Example: python3 Cohen_kappa.py --data_dir /Users/labadmin/Documents/Silvia/HumanData --option cohen --baby_id xxxx_xxxxxx
