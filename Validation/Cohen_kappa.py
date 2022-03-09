@@ -22,16 +22,14 @@ def qualitative_table(args):
     """
 
     # Read judge list
-    #judge_list_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_judges_list.csv')
-    judge_list_table = pd.read_csv(args.data_dir + '/' + 'common_judges_list.csv')
+    if args.judge == 'all':
+        judge_list_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_judges_list.csv')
+    elif args.judge == 'common':
+        judge_list_table = pd.read_csv(args.data_dir + '/' + 'common_judges_list.csv')
     judges_list_code = judge_list_table["judge_code"]
     judges_list_name = judge_list_table["judge_name"]
 
-    # Initialize sheet
-    workbook = xlsxwriter.Workbook(args.data_dir + '/' + args.baby_id + '_Qualitative_table_ALL.xlsx')
-    worksheet = workbook.add_worksheet()
-
-    n_test_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_scrubbed_CHNrelabel_' + judges_list_name[0] + '_1.csv')
+    n_test_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_scrubbed_CHNrelabel_' + judges_list_name[1] + '_1.csv')
     n_test = len(n_test_table["startSeconds"])
     n_test_start = n_test_table["startSeconds"]
     n_test_end = n_test_table["endSeconds"]
@@ -55,11 +53,21 @@ def qualitative_table(args):
         prominence_value = human[:,2]
         prominence_aux = []
         for j in range(0, len(pos)):
-            if prominence_value[j] > 2:
-                prominence_aux.append('NOF')
+            if prominence_value[j] == False or prominence_value[j] == True:
+                if prominence_value[j] == False:
+                    prominence_aux.append('NOF')
+                else:
+                    prominence_aux.append(lena_labels[pos[j]])
             else:
-                prominence_aux.append(lena_labels[pos[j]])
+                if prominence_value[j] > 2:
+                    prominence_aux.append('NOF')
+                else:
+                    prominence_aux.append(lena_labels[pos[j]])
         prominence.append(prominence_aux)
+
+    # Initialize sheet
+    workbook = xlsxwriter.Workbook(args.data_dir + '/' + args.baby_id + '_Qualitative_table_ALL.xlsx')
+    worksheet = workbook.add_worksheet()
 
     # Rows and columns are zero indexed.
     row = 0
@@ -247,6 +255,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--baby_id', type = str)
+    parser.add_argument('--judge', type=str)
 
     args = parser.parse_args()
 
