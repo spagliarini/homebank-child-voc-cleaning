@@ -162,40 +162,35 @@ def qualitative_table_restricted(args):
     # Creating content and common data
     content = ["test", "startsec", "endsec", "lena"]
     prominence = []
-    new_judges = []
     for i in range(0, len(judges_list_name)):
-        content.append(judges_list_name[i])
         human_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_scrubbed_CHNrelabel_' + judges_list_name[i] + '_1.csv')
         human = pd.DataFrame.to_numpy(human_table)
         prominence_value = human[:,2]
         len_prominence_value = len(prominence_value)
         prominence_aux = []
-        if len(prominence_value) >= len(pos):
-            for j in range(0, len(pos)):
-                if prominence_value[j] != False and prominence_value[j] != True:
-                    new_judges.append(judges_list_name[i])
-                    if prominence_value[j] > 2:
-                        prominence_aux.append('NOF')
-                    else:
-                        prominence_aux.append(lena_labels[pos[j]])
+        if prominence_value[0] == 'FALSE' or prominence_value[0] == 'TRUE':
+            print(judges_list_name[i])
+            print('True/False : excluded')
         else:
-            j = 0
-            while j < len_prominence_value:
-                if prominence_value[j] == False or prominence_value[j] == True:
-                    if prominence_value[j] == False:
-                        prominence_aux.append('NOF')
-                    else:
-                        prominence_aux.append(lena_labels[pos[j]])
-                else:
+            content.append(judges_list_name[i])
+            if len(prominence_value) >= len(pos):
+                for j in range(0, len(pos)):
                     if prominence_value[j] > 2:
                         prominence_aux.append('NOF')
                     else:
                         prominence_aux.append(lena_labels[pos[j]])
-                j = j + 1
+            else:
+                j = 0
+                while j < len_prominence_value:
+                    if prominence_value[j] > 2:
+                        prominence_aux.append('NOF')
+                    else:
+                        prominence_aux.append(lena_labels[pos[j]])
+                    j = j + 1
 
-            while j < len(pos):
-                prominence_aux.append('NOF')
-                j = j + 1
+                while j < len(pos):
+                    prominence_aux.append('NOF')
+                    j = j + 1
 
         prominence.append(prominence_aux)
 
@@ -229,7 +224,7 @@ def qualitative_table_restricted(args):
 
     # List of the judgments
     column = 4
-    for judge in range(0, len(judges_list_name)):
+    for judge in range(0, len(content)):
         row = 1
         for item in range(0, n_test):
             worksheet.write(row, column, prominence[judge][item])
@@ -385,7 +380,7 @@ if __name__ == '__main__':
     import sys
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--option', type=str, choices=['table', 'cohen', 'avg'])
+    parser.add_argument('--option', type=str, choices=['table', 'table_bis', 'cohen', 'avg'])
     parser.add_argument('--data_dir', type=str)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--baby_id', type = str)
@@ -399,6 +394,9 @@ if __name__ == '__main__':
 
     if args.option == 'table':
         qualitative_table(args)
+
+    if args.option == 'table_bis':
+        qualitative_table_restricted(args)
 
     if args.option == 'cohen':
         classes = ['CHNNSP', 'CHNSP', 'NOF']
