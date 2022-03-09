@@ -51,18 +51,39 @@ def qualitative_table(args):
         human_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_scrubbed_CHNrelabel_' + judges_list_name[i] + '_1.csv')
         human = pd.DataFrame.to_numpy(human_table)
         prominence_value = human[:,2]
+        len_prominence_value = len(prominence_value)
         prominence_aux = []
-        for j in range(0, len(pos)):
-            if prominence_value[j] == False or prominence_value[j] == True:
-                if prominence_value[j] == False:
-                    prominence_aux.append('NOF')
+        if len(prominence_value) >= len(pos):
+            for j in range(0, len(pos)):
+                if prominence_value[j] == False or prominence_value[j] == True:
+                    if prominence_value[j] == False:
+                        prominence_aux.append('NOF')
+                    else:
+                        prominence_aux.append(lena_labels[pos[j]])
                 else:
-                    prominence_aux.append(lena_labels[pos[j]])
-            else:
-                if prominence_value[j] > 2:
-                    prominence_aux.append('NOF')
+                    if prominence_value[j] > 2:
+                        prominence_aux.append('NOF')
+                    else:
+                        prominence_aux.append(lena_labels[pos[j]])
+        else:
+            j = 0
+            while j < len_prominence_value:
+                if prominence_value[j] == False or prominence_value[j] == True:
+                    if prominence_value[j] == False:
+                        prominence_aux.append('NOF')
+                    else:
+                        prominence_aux.append(lena_labels[pos[j]])
                 else:
-                    prominence_aux.append(lena_labels[pos[j]])
+                    if prominence_value[j] > 2:
+                        prominence_aux.append('NOF')
+                    else:
+                        prominence_aux.append(lena_labels[pos[j]])
+                j = j + 1
+
+            while j < len(pos):
+                prominence_aux.append('NOF')
+                j = j + 1
+
         prominence.append(prominence_aux)
 
     # Initialize sheet
