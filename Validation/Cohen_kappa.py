@@ -127,6 +127,119 @@ def qualitative_table(args):
 
     print('Done')
 
+def qualitative_table_restricted(args):
+    """
+    Build an excel table to run the test. ONLY when the judgement has been made based on a scale 1-5 of prominence.
+    - list of vocalizations (from 1 to N - number of vocalizations)
+    - start (in seconds)
+    - end (in seconds)
+    - lena labels
+    - columns containing the other judges' labels
+    """
+
+    # Read judge list
+    if args.judge == 'all':
+        judge_list_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_judges_list.csv')
+    elif args.judge == 'common':
+        judge_list_table = pd.read_csv(args.data_dir + '/' + 'common_judges_list.csv')
+    judges_list_code = judge_list_table["judge_code"]
+    judges_list_name = judge_list_table["judge_name"]
+
+    n_test_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_scrubbed_CHNrelabel_' + judges_list_name[1] + '_1.csv')
+    n_test = len(n_test_table["startSeconds"])
+    n_test_start = n_test_table["startSeconds"]
+    n_test_end = n_test_table["endSeconds"]
+
+    # lena labels
+    lena = pd.read_csv(args.data_dir + '/' + args.baby_id + '_segments.csv')
+    lena_labels = lena["segtype"]
+
+    CHNSP_pos = np.where(lena_labels == 'CHNSP')[0]
+    CHNNSP_pos = np.where(lena_labels == 'CHNNSP')[0]
+    pos = np.append(CHNSP_pos, CHNNSP_pos)
+    pos = sorted(pos)
+
+    # Creating content and common data
+    content = ["test", "startsec", "endsec", "lena"]
+    prominence = []
+    new_judges = []
+    for i in range(0, len(judges_list_name)):
+        content.append(judges_list_name[i])
+        human_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_scrubbed_CHNrelabel_' + judges_list_name[i] + '_1.csv')
+        human = pd.DataFrame.to_numpy(human_table)
+        prominence_value = human[:,2]
+        len_prominence_value = len(prominence_value)
+        prominence_aux = []
+        if len(prominence_value) >= len(pos):
+            for j in range(0, len(pos)):
+                if prominence_value[j] != False and prominence_value[j] != True:
+                    new_judges.append(judges_list_name[i])
+                    if prominence_value[j] > 2:
+                        prominence_aux.append('NOF')
+                    else:
+                        prominence_aux.append(lena_labels[pos[j]])
+        else:
+            j = 0
+            while j < len_prominence_value:
+                if prominence_value[j] == False or prominence_value[j] == True:
+                    if prominence_value[j] == False:
+                        prominence_aux.append('NOF')
+                    else:
+                        prominence_aux.append(lena_labels[pos[j]])
+                else:
+                    if prominence_value[j] > 2:
+                        prominence_aux.append('NOF')
+                    else:
+                        prominence_aux.append(lena_labels[pos[j]])
+                j = j + 1
+
+            while j < len(pos):
+                prominence_aux.append('NOF')
+                j = j + 1
+
+        prominence.append(prominence_aux)
+
+    # Initialize sheet
+    workbook = xlsxwriter.Workbook(args.data_dir + '/' + args.baby_id + '_Qualitative_table_ALL.xlsx')
+    worksheet = workbook.add_worksheet()
+
+    # Rows and columns are zero indexed.
+    row = 0
+    column = 0
+    # Iterating through content list
+    for item in content:
+        # write operation perform
+        worksheet.write(row, column, item)
+
+        # incrementing the value of row by one
+        # with each iterations.
+        column += 1
+
+    # List of test number, start and end times, and lena labels
+    row=1
+    for item in range(0, n_test):
+        worksheet.write(row, 0, item)
+        worksheet.write(row, 1, n_test_start[item])
+        worksheet.write(row, 2, n_test_end[item])
+        worksheet.write(row, 3, lena_labels[pos[item]])
+
+        # incrementing the value of row by one
+        # with each iteratons.
+        row += 1
+
+    # List of the judgments
+    column = 4
+    for judge in range(0, len(judges_list_name)):
+        row = 1
+        for item in range(0, n_test):
+            worksheet.write(row, column, prominence[judge][item])
+            row += 1
+        column += 1
+
+    workbook.close()
+
+    print('Done')
+
 def cohen_kappa(classes, args):
     """
     Compute Cohen kappa for a given set of human judges (across and versus lena).
