@@ -374,13 +374,70 @@ def avg_cohen(args):
 
     print('Done')
 
+def modal(babies, age, judges_list_name, args):
+    """
+    For a given recording, compute the modal value across listeners.
+
+    Output:
+    For each baby, a table containing:
+    - the vocalization list (start and end times)
+    - lena label for the vocalization
+    - the prominences of all the judges for each vocalization
+    - the modal value for each vocalization
+    - the label chosen depending on the modal value as the "average label"
+    """
+    for b in range(0, len(babies)):
+        n_test_table = pd.read_csv(args.data_dir + '/' + babies[b] + '_scrubbed_CHNrelabel_' + judges_list_name[1] + '_1.csv')
+        n_test = len(n_test_table["startSeconds"])
+        n_test_start = n_test_table["startSeconds"]
+        n_test_end = n_test_table["endSeconds"]
+
+        for j in range(0, len(judges_list_name)):
+            human_table = pd.read_csv(args.data_dir + '/' + babies[b] + '_scrubbed_CHNrelabel_' + judges_list_name[j] + '_1.csv')
+            human = pd.DataFrame.to_numpy(human_table)
+            prominence_value = human[:, 2]
+            len_prominence_value = len(prominence_value)
+            prominence_aux = []
+            if prominence_value[0] == 'FALSE' or prominence_value[0] == 'TRUE':
+                print(judges_list_name[j])
+                print('True/False : excluded')
+            else:
+                #
+
+            # Creation of the table
+            workbook = xlsxwriter.Workbook(args.data_dir + '/' + babies[b] + '_modal_value.xlsx')
+            worksheet = workbook.add_worksheet()
+
+            # Define the list of vocalizations, time stamps and lena labels
+            for item in range(0, n_test):
+                worksheet.write(row, 0, item)
+                worksheet.write(row, 1, n_test_start[item])
+                worksheet.write(row, 2, n_test_end[item])
+                worksheet.write(row, 3, lena_labels[pos[item]])
+
+            # Define judges names on "x axis"
+            row = 0
+            column = 4
+            # Iterating through content list
+            for item in judges_list_name:
+                # write operation perform
+                worksheet.write(row, column, item)
+                # incrementing the value of row by one
+                # with each iterations.
+                column += 1
+            worksheet.write(row, column, 'modal_value')
+            column += 1
+            worksheet.write(row, column, 'average_label')
+
+    print('Done')
+
 if __name__ == '__main__':
     import argparse
     import glob2
     import sys
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--option', type=str, choices=['table', 'table_bis', 'cohen', 'avg'])
+    parser.add_argument('--option', type=str, choices=['table', 'table_bis', 'cohen', 'avg', 'mod'])
     parser.add_argument('--data_dir', type=str)
     parser.add_argument('--output_dir', type=str)
     parser.add_argument('--baby_id', type = str)
@@ -404,5 +461,19 @@ if __name__ == '__main__':
 
     if args.option == 'avg':
         avg_cohen(args)
+
+    if args.option == 'mod':
+        # Read baby list
+        babies_table = pd.read_csv(args.data_dir + '/' + 'babies_list.csv')
+        babies = babies_table["name"]
+        age = babies_table["age"]
+
+        # Read judge list
+        # judge_list_table = pd.read_csv(args.data_dir + '/' + args.baby_id + '_judges_list.csv')
+        judge_list_table = pd.read_csv(args.data_dir + '/' + 'common_judges_list.csv')
+        judges_list_code = judge_list_table["judge_code"]
+        judges_list_name = judge_list_table["judge_name"]
+
+        modal(babies, age, judges_list_name, args)
 
     ### Example: python3 Cohen_kappa.py --data_dir /Users/labadmin/Documents/Silvia/HumanData --option cohen --baby_id xxxx_xxxxxx
